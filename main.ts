@@ -23,7 +23,7 @@
 // against the gate (UTF-8, 1–16 characters, not only whitespace), and writes
 // it to $OUTPUT_DIR/entry.txt (default /output).
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const EMOJI = "\u{1FAE0}"; // U+1FAE0 MELTING FACE
@@ -36,7 +36,18 @@ if (chars.length < 1 || chars.length > 16) {
 if (!EMOJI.trim()) {
   throw new Error("entry must not be only whitespace");
 }
+if (chars[0].codePointAt(0) !== 0x1fae0) {
+  throw new Error("entry must be U+1FAE0 MELTING FACE");
+}
 
 mkdirSync(OUTPUT_DIR, { recursive: true });
-writeFileSync(join(OUTPUT_DIR, "entry.txt"), EMOJI, "utf8");
-console.log(`wrote ${EMOJI} (${chars.length} character) to ${join(OUTPUT_DIR, "entry.txt")}`);
+const outPath = join(OUTPUT_DIR, "entry.txt");
+writeFileSync(outPath, EMOJI, "utf8");
+
+// Round-trip: the file on disk must be byte-identical to the entry, with no
+// trailing newline or extra bytes — the gate counts characters, and the judge
+// reads exactly what is there.
+if (readFileSync(outPath, "utf8") !== EMOJI) {
+  throw new Error("round-trip mismatch: entry.txt does not equal the entry");
+}
+console.log(`wrote ${EMOJI} (${chars.length} character) to ${outPath}`);
